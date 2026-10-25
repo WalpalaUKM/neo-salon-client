@@ -12,34 +12,16 @@ datasource db {
   provider = "postgresql"
 }
 
-model Student{
-  id Int @id @default(autoincrement())
-  name String
-  city String
-}
+ model Student {
+  id        Int      @id @default(autoincrement())
+  name      String
+  email     String   @unique
+  createdAt DateTime @default(now())
+ }
 
-model Teacher{
-  id Int @id @default(autoincrement())
-  name String
-  subject String
-
- 
-}
-
-<<<<<<< Updated upstream
-model Course{
-  id String @id @default(uuid())
-  title String
+model Course {
+  id        Int      @id @default(autoincrement())
+  title     String
   description String
-  teacherId Int
-  teacher Teacher @relation(fields: [teacherId], references: [id])
-}
-
-model Enrollment{
-  id Int @id @default(autoincrement())
-  studentId Int
-  courseId String
-
+  createdAt DateTime @default(now())
 } 
-=======
->>>>>>> Stashed changes
