@@ -12,11 +12,18 @@ datasource db {
   provider = "postgresql"
 }
 
- model Student {
-  id        Int      @id @default(autoincrement())
-  name      String
-  email     String   @unique
+model User{
+  Id String @id @default(uuid())
+  email String @unique
+  phone String ? @unique
+  firstName String
+  lastName String
+  password String
+  role String @default("CUSTOMER")
+  status String @default("ACTIVE") //ACTIVE, BANNED, SUSPENDED
   createdAt DateTime @default(now())
- }
-
-
+  lastLogin DateTime ?
+  privileges String[] @default([])//["CREATE_PRODUCT", "UPDATE_PRODUCT", "DELETE_PRODUCT", "VIEW_PRODUCT"]
+  //emailVerified Boolean @default(false)
+  //phoneVerified Boolean @default(false)
+}  
