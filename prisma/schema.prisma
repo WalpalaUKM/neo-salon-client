@@ -22,7 +22,7 @@ model User{
   role String @default("CUSTOMER")
   status String @default("ACTIVE") //ACTIVE, BANNED, SUSPENDED
   createdAt DateTime @default(now())
-  lastLogin DateTime ?
+  lastLogin DateTime ? @db.Timestamptz(3)
   privileges String[] @default([])//["CREATE_PRODUCT", "UPDATE_PRODUCT", "DELETE_PRODUCT", "VIEW_PRODUCT"]
   //emailVerified Boolean @default(false)
   //phoneVerified Boolean @default(false)

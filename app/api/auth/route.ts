@@ -3,6 +3,7 @@ import { compare } from "bcryptjs";
 import { NextRequest, NextResponse } from "next/server";
 import * as jose from "jose";
 import { emitWarning } from "process";
+import { use } from "react";
 
 export async function POST(request : NextRequest) {
 
@@ -12,8 +13,20 @@ export async function POST(request : NextRequest) {
     if(body.email == null){
         return NextResponse.json({
             massage : "Email is required"
-        })
+        },
+    {
+        status : 422
+    })
 
+    }
+
+    if(body.password == null){
+        return NextResponse.json({
+            massage : "password is required"
+        },
+        {
+        status : 422
+    })
     }
    
     const user = await prisma.user.findFirst(
@@ -27,13 +40,36 @@ export async function POST(request : NextRequest) {
     if(user == null){
         return NextResponse.json({
             massage : "User not found"
-        })
+        },
+        {
+            status : 404
+        }
+    )
+    }
+
+    if(user.status != "ACTIVE"){
+        return NextResponse.json({
+            massage : "Your account is disable. Please contact the Administrator."
+        },
+        {
+            status : 403
+        }
+    )
     }
 
 
     const isPasswordvalid = await compare(body.password , user.password)
 
     if(isPasswordvalid){
+
+        await prisma.user.update({
+            where : {
+                Id : user.Id
+            },
+            data : {
+                lastLogin : new Date()
+            }
+        })
         
         const secretText = process.env.JOSE_SECRET
         const secret = new TextEncoder().encode(secretText)
@@ -65,7 +101,11 @@ export async function POST(request : NextRequest) {
     else{
         return NextResponse.json({
             massage : "Login Fail"
-        })
+        },
+        {
+            status :403
+        }
+    )
     }
 
 
