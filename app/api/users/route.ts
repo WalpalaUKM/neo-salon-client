@@ -1,6 +1,7 @@
 import prisma from "@/lib/prisma";
-import { isPrivileged } from "@/utilis/authentication";
+import { getUser, isPrivileged } from "@/utilis/authentication";
 import bcrypt, { hash } from "bcryptjs";
+import { getURL } from "next/dist/shared/lib/utils";
 import { NextRequest, NextResponse } from "next/server";
 
 export async function GET(request: NextRequest) {
@@ -133,4 +134,36 @@ export async function POST(request: NextRequest) {
       { status: 500 },
     );
   }
+}
+
+//user's data update
+export async function PUT(request: NextRequest) {
+  
+  const id = request.nextUrl.searchParams.get("id")
+  
+  const requiredUser =await getUser(request)
+
+  if(requiredUser ==null){
+    return NextResponse.json({
+      massage : "Your not logged in"
+    },{
+      status :401
+    })
+  }
+
+  if(requiredUser.Id == id){
+    return NextResponse.json({
+      massage : ""
+    })
+    
+  }else{
+    return NextResponse.json({
+
+    })
+  }
+  
+
+
+
+
 }
