@@ -24,6 +24,7 @@ model User{
   createdAt DateTime @default(now())
   lastLogin DateTime ? @db.Timestamptz(3)
   privileges String[] @default([])//privileges": ["users:add","users:edit","users:read"]
+  proflePicture String @default("/image/default-profile.png")
   //emailVerified Boolean @default(false)
   //phoneVerified Boolean @default(false)
 }  

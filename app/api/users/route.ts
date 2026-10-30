@@ -1,8 +1,11 @@
 import prisma from "@/lib/prisma";
 import { getUser, isPrivileged } from "@/utilis/authentication";
 import bcrypt, { hash } from "bcryptjs";
+import { makeSessionDataHangingPromise } from "next/dist/server/dynamic-rendering-utils";
 import { getURL } from "next/dist/shared/lib/utils";
 import { NextRequest, NextResponse } from "next/server";
+import { use } from "react";
+import { renderToPipeableStream } from "react-dom/server";
 
 export async function GET(request: NextRequest) {
   const havePrivilege = await isPrivileged(request, "users:read");
@@ -18,7 +21,35 @@ export async function GET(request: NextRequest) {
     );
   }
 
+  const pageNumberInstring =
+    request.nextUrl.searchParams.get("pageNumber") || " 1";
+  const pageSizeInstring = request.nextUrl.searchParams.get("pageSize") || "10";
+
+  const pageNumber = parseInt(pageNumberInstring);
+  const pagesize = parseInt(pageSizeInstring);
+  const userCount = await prisma.user.count();
+
+  const totalPage = Math.ceil(userCount / pageNumber);
+
+  if (pageNumber > totalPage) {
+    return NextResponse.json(
+      {
+        massage: "Page number exceeds total pages",
+      },
+      {
+        status: 400,
+      },
+    );
+  }
+
+  console.log({
+    pageNumber: pageNumber,
+    pageSize: pagesize,
+  });
+
   const users = await prisma.user.findMany({
+    skip: (pageNumber - 1) * pagesize,
+    take: pagesize,
     select: {
       Id: true,
       email: true,
@@ -35,6 +66,12 @@ export async function GET(request: NextRequest) {
   return NextResponse.json({
     message: "users fetched successfully",
     users: users,
+    pagination: {
+      pageNumber: pageNumber,
+      pageSize: pagesize,
+      totalPage: totalPage,
+      totalCount: userCount,
+    },
   });
 }
 
@@ -119,12 +156,12 @@ export async function POST(request: NextRequest) {
         lastName: body.lastName,
         password: hashedPassword,
         phone: body.phone || null,
-      }
+      },
     });
 
     return NextResponse.json(
       {
-        message: "User created successfully"
+        message: "User created successfully",
       },
       { status: 201 },
     );
@@ -138,32 +175,84 @@ export async function POST(request: NextRequest) {
 
 //user's data update
 export async function PUT(request: NextRequest) {
-  
-  const id = request.nextUrl.searchParams.get("id")
-  
-  const requiredUser =await getUser(request)
+  const id = request.nextUrl.searchParams.get("id");
+  const requiredUser = await getUser(request);
 
-  if(requiredUser ==null){
-    return NextResponse.json({
-      massage : "Your not logged in"
-    },{
-      status :401
-    })
+  if (requiredUser == null) {
+    return NextResponse.json(
+      {
+        message: "You are not logged in",
+      },
+      {
+        status: 401,
+      },
+    );
   }
 
-  if(requiredUser.Id == id){
-    return NextResponse.json({
-      massage : ""
-    })
-    
-  }else{
-    return NextResponse.json({
+  const body = await request.json();
 
-    })
+  if (requiredUser.Id == id) {
+    const user = await prisma.user.findUnique({
+      where: {
+        Id: id,
+      },
+    });
+
+    if (user == null) {
+      return NextResponse.json(
+        {
+          message: "You can only update your own user data",
+        },
+        {
+          status: 403,
+        },
+      );
+    }
+    await prisma.user.update({
+      where: {
+        Id: id,
+      },
+      data: {
+        email: body.email || user.email,
+        firstName: body.firstName || user.firstName,
+        lastName: body.lastName || user.lastName,
+        phone: body.phone || user.phone,
+        proflePicture: body.proflePicture || user.proflePicture,
+      },
+    });
+
+    return NextResponse.json({
+      message: "User updated successfully",
+    });
+  } else {
+    const havePrivilege = await isPrivileged(request, "user :edit");
+
+    if (!havePrivilege) {
+      return NextResponse.json(
+        {
+          message: "You do not have the privilege to edit oter users",
+        },
+        {
+          status: 403,
+        },
+      );
+    }
+
+    const user = await prisma.user.findUnique({
+      where: {
+        Id: id || "0000",
+      },
+    });
+
+    if (user == null) {
+      return NextResponse.json(
+        {
+          message: "User not found",
+        },
+        {
+          status: 404,
+        },
+      );
+    }
   }
-  
-
-
-
-
 }
