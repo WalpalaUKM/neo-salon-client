@@ -1,5 +1,12 @@
 {
   "editor.suggest.snippetsPreventQuickSuggestions": true,
   "emmet.useInlineCompletions": true,
-  "editor.inlineSuggest.suppressSuggestions": true
+  "editor.inlineSuggest.suppressSuggestions": true,
+  "editor.quickSuggestionsDelay": 10,
+  "editor.wordBasedSuggestions": "currentDocument",
+  "search.searchView.keywordSuggestions": true,
+  "emmet.showSuggestionsAsSnippets": true,
+  "geminicodeassist.inlineSuggestions.nextEditPredictions": true,
+  "markdown.editor.quickSuggestions": true,
+  "editor.wordWrap": "on"
 }

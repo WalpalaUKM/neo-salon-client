@@ -1,11 +1,9 @@
 import prisma from "@/lib/prisma";
+import { UserRegistrationRequestSchema } from "@/types/dto/userRegisterationRequ";
 import { getUser, isPrivileged } from "@/utilis/authentication";
-import bcrypt, { hash } from "bcryptjs";
-import { makeSessionDataHangingPromise } from "next/dist/server/dynamic-rendering-utils";
-import { getURL } from "next/dist/shared/lib/utils";
+import bcrypt from "bcryptjs";
 import { NextRequest, NextResponse } from "next/server";
-import { use } from "react";
-import { renderToPipeableStream } from "react-dom/server";
+import z from "zod";
 
 export async function GET(request: NextRequest) {
   const havePrivilege = await isPrivileged(request, "users:read");
@@ -76,70 +74,37 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  // Check if caller has privilege to add users (e.g. admin)
-  const havePrivilege = await isPrivileged(request, "users:add");
+  // // Check if caller has privilege to add users (e.g. admin)
+  // const havePrivilege = await isPrivileged(request, "users:add");
 
-  if (!havePrivilege) {
-    return NextResponse.json(
-      {
-        message: "You do not have the privilege to add users",
-      },
-      {
-        status: 403,
-      },
-    );
-  }
+  // if (!havePrivilege) {
+  //   return NextResponse.json(
+  //     {
+  //       message: "You do not have the privilege to add users",
+  //     },
+  //     {
+  //       status: 403,
+  //     },
+  //   );
+  // }
 
+  // email, firstName, lastName, password, phone (optional)
+
+  const body = await request.json();
   try {
-    // email, firstName, lastName, password, phone (optional)
-    const body = await request.json();
-
-    // 1. Validate required fields
-    if (!body.email) {
-      return NextResponse.json(
-        { message: "Email is required" },
-        { status: 422 },
-      );
-    }
-
-    if (!body.firstName) {
-      return NextResponse.json(
-        { message: "First name is required" },
-        { status: 422 },
-      );
-    }
-
-    if (!body.lastName) {
-      return NextResponse.json(
-        { message: "Last name is required" },
-        { status: 422 },
-      );
-    }
-
-    if (!body.password) {
-      return NextResponse.json(
-        { message: "Password is required" },
-        { status: 422 },
-      );
-    }
+    const parseBody = UserRegistrationRequestSchema.parse(body);
 
     // 2. Check for duplicate email or phone
-    const existingUser = await prisma.user.findFirst({
+    const existingUser = await prisma.user.findUnique({
       where: {
-        OR: [
-          { email: body.email },
-          ...(body.phone ? [{ phone: body.phone }] : []),
-        ],
+        email: parseBody.email,
       },
     });
 
-    if (existingUser) {
+    if (existingUser != null) {
       return NextResponse.json(
         {
-          message:
-            existingUser.email === body.email
-              ? "Email is already registered"
-              : "Phone number is already registered",
+          message: "Email is already registered",
         },
         { status: 409 },
       );
@@ -166,6 +131,20 @@ export async function POST(request: NextRequest) {
       { status: 201 },
     );
   } catch (error) {
+    if (error instanceof z.ZodError) {
+      //console.log(error.issues[0]?.message ?? "Invalid Input");
+
+      return NextResponse.json(
+        {
+          message: error.issues[0]?.message ?? "Invalid Input",
+        },
+        {
+          status: 400,
+        },
+      );
+    }
+
+    console.log(error);
     return NextResponse.json(
       { message: "Internal server error" },
       { status: 500 },
@@ -173,7 +152,7 @@ export async function POST(request: NextRequest) {
   }
 }
 
-//user's data update
+//user's data update function
 export async function PUT(request: NextRequest) {
   const id = request.nextUrl.searchParams.get("id");
   const requiredUser = await getUser(request);
@@ -189,9 +168,14 @@ export async function PUT(request: NextRequest) {
     );
   }
 
+  try {
+  } catch {}
+
   const body = await request.json();
 
   if (requiredUser.Id == id) {
+    //never allow users to update their own role and privileges,status
+
     const user = await prisma.user.findUnique({
       where: {
         Id: id,
@@ -201,10 +185,10 @@ export async function PUT(request: NextRequest) {
     if (user == null) {
       return NextResponse.json(
         {
-          message: "You can only update your own user data",
+          message: "User not found",
         },
         {
-          status: 403,
+          status: 404,
         },
       );
     }
@@ -225,7 +209,7 @@ export async function PUT(request: NextRequest) {
       message: "User updated successfully",
     });
   } else {
-    const havePrivilege = await isPrivileged(request, "user :edit");
+    const havePrivilege = await isPrivileged(request, "users:edit");
 
     if (!havePrivilege) {
       return NextResponse.json(
@@ -240,7 +224,7 @@ export async function PUT(request: NextRequest) {
 
     const user = await prisma.user.findUnique({
       where: {
-        Id: id || "0000",
+        Id: id || "0000", // it can be string or null
       },
     });
 
