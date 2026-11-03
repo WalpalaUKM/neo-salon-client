@@ -1,7 +1,10 @@
 import prisma from "@/lib/prisma";
 import { UserRegistrationRequestSchema } from "@/types/dto/userRegisterationRequ";
+import { UserUpdatedByAdminSchema } from "@/types/dto/UserUpdatedByAdmin";
+import { UserSelfUpdateRequestSchema } from "@/types/dto/UseSelfUpdateRequ";
 import { getUser, isPrivileged } from "@/utilis/authentication";
 import bcrypt from "bcryptjs";
+import { error } from "console";
 import { NextRequest, NextResponse } from "next/server";
 import z from "zod";
 
@@ -169,72 +172,115 @@ export async function PUT(request: NextRequest) {
   }
 
   try {
-  } catch {}
+    const body = await request.json();
 
-  const body = await request.json();
+    if (requiredUser.Id == id) {
+      //never allow users to update their own role and privileges,status
 
-  if (requiredUser.Id == id) {
-    //never allow users to update their own role and privileges,status
+      UserSelfUpdateRequestSchema.parse(body);
 
-    const user = await prisma.user.findUnique({
-      where: {
-        Id: id,
-      },
-    });
+      const user = await prisma.user.findUnique({
+        where: {
+          Id: id,
+        },
+      });
 
-    if (user == null) {
+      if (user == null) {
+        return NextResponse.json(
+          {
+            message: "User not found",
+          },
+          {
+            status: 404,
+          },
+        );
+      }
+      await prisma.user.update({
+        where: {
+          Id: id,
+        },
+        data: {
+          email: body.email || user.email,
+          firstName: body.firstName || user.firstName,
+          lastName: body.lastName || user.lastName,
+          phone: body.phone || user.phone,
+          proflePicture: body.proflePicture || user.proflePicture,
+        },
+      });
+
+      return NextResponse.json({
+        message: "User updated successfully",
+      });
+    } else {
+      const havePrivilege = await isPrivileged(request, "users:edit");
+
+      if (!havePrivilege) {
+        return NextResponse.json(
+          {
+            message: "You do not have the privilege to edit oter users",
+          },
+          {
+            status: 403,
+          },
+        );
+      }
+
+      UserUpdatedByAdminSchema.parse(body);
+
+      const user = await prisma.user.findUnique({
+        where: {
+          Id: id || "0000", // it can be string or null
+        },
+      });
+
+      if (user == null) {
+        return NextResponse.json(
+          {
+            message: "User not found",
+          },
+          {
+            status: 404,
+          },
+        );
+      }
+
+      await prisma.user.update({
+        where: {
+          Id: id || "0000", // it can be string or null
+        },
+        data: {
+          email: body.email || user.email,
+          //firstName: body.firstName || user.firstName,
+          //lastName: body.lastName || user.lastName,
+          phone: body.phone || user.phone,
+          //proflePicture: body.proflePicture || user.proflePicture,
+          //role: body.role || user.role,
+          //status: body.status || user.status,
+          //privileges: body.privileges || user.privileges,
+        },
+      });
+
+      return NextResponse.json({
+        message: "User updated successfully",
+      });
+    }
+  } catch (error) {
+    if (error instanceof z.ZodError) {
       return NextResponse.json(
         {
-          message: "User not found",
+          message: error.issues[0]?.message ?? "Invalid Input",
         },
         {
-          status: 404,
+          status: 400,
         },
       );
-    }
-    await prisma.user.update({
-      where: {
-        Id: id,
-      },
-      data: {
-        email: body.email || user.email,
-        firstName: body.firstName || user.firstName,
-        lastName: body.lastName || user.lastName,
-        phone: body.phone || user.phone,
-        proflePicture: body.proflePicture || user.proflePicture,
-      },
-    });
-
-    return NextResponse.json({
-      message: "User updated successfully",
-    });
-  } else {
-    const havePrivilege = await isPrivileged(request, "users:edit");
-
-    if (!havePrivilege) {
+    } else {
       return NextResponse.json(
         {
-          message: "You do not have the privilege to edit oter users",
+          message: "Internal server error",
         },
         {
-          status: 403,
-        },
-      );
-    }
-
-    const user = await prisma.user.findUnique({
-      where: {
-        Id: id || "0000", // it can be string or null
-      },
-    });
-
-    if (user == null) {
-      return NextResponse.json(
-        {
-          message: "User not found",
-        },
-        {
-          status: 404,
+          status: 500,
         },
       );
     }
