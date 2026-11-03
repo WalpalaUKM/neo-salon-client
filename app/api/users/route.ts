@@ -249,13 +249,13 @@ export async function PUT(request: NextRequest) {
           Id: id || "0000", // it can be string or null
         },
         data: {
-          email: body.email || user.email,
+          //email: body.email || user.email,
           //firstName: body.firstName || user.firstName,
           //lastName: body.lastName || user.lastName,
-          phone: body.phone || user.phone,
+          //phone: body.phone || user.phone,
           //proflePicture: body.proflePicture || user.proflePicture,
-          //role: body.role || user.role,
-          //status: body.status || user.status,
+          role: body.role || user.role,
+          status: body.status || user.status,
           //privileges: body.privileges || user.privileges,
         },
       });

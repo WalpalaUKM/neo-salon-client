@@ -28,3 +28,41 @@ model User{
   //emailVerified Boolean @default(false)
   //phoneVerified Boolean @default(false)
 }  
+
+enum ProductStatus{
+  ACTIVE
+  INACTIVE
+  DELETED
+}
+
+
+model Product{
+  Id String @id @default(uuid())
+  sku String @unique
+  name String
+  altNmae String [] @default([])
+  description String 
+  stock Int @default(0)
+  price Float
+  compareAtPrice Float ?
+  brand String ?
+  category String ?
+  productStatus ProductStatus @default(ACTIVE)
+  media Media[]
+  rating Float? @default(0)
+
+}
+
+enum MediaType {
+  IMAGE
+  VIDEO
+}
+model Media{
+  Id String @id @default(uuid())
+  url String
+  type MediaType // png,jpg,video
+  productId String
+  product Product @relation(fields: [productId], references: [Id])
+
+}
+

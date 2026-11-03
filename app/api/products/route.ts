@@ -1,16 +1,27 @@
 import { NextRequest, NextResponse } from "next/server";
-import * as jose from "jose";
-import { getUser } from "@/utilis/authentication";
+import { getUser, isPrivileged } from "@/utilis/authentication";
 
+export async function GET(request: NextRequest) {
+  const user = getUser(request);
 
-export async function GET(request : NextRequest){
+  console.log("User :", user);
 
-    const user = getUser(request)
+  return NextResponse.json({
+    massage: "ok",
+  });
+}
 
-    console.log("User :",user);
-    
-    return NextResponse.json({
-                massage : "ok"
-            })
+export async function POST(request: NextRequest) {
+  const hasPrivileges = await isPrivileged(request, "products:add");
 
+  if (hasPrivileges) {
+  } else {
+    return NextResponse.json(
+      {
+        message:
+          "You don't have the required privileges to perform this action.",
+      },
+      { status: 403 },
+    );
+  }
 }
