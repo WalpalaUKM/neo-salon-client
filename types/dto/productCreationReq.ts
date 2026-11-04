@@ -1,6 +1,7 @@
 import z from "zod";
+import { de } from "zod/locales";
 
-export const productCreationSchema = z.object({
+const productCreationSchema = z.object({
   sku: z.string().max(50),
   name: z.string().max(100),
   altNmae: z.array(z.string()).default([]).optional(),
@@ -18,3 +19,6 @@ export const productCreationSchema = z.object({
     }),
   ),
 });
+
+export default productCreationSchema;
+export type ProductCreationReq = z.infer<typeof productCreationSchema>;
