@@ -1,10 +1,9 @@
 import z from "zod";
-import { de } from "zod/locales";
 
 const productCreationSchema = z.object({
   sku: z.string().max(50),
   name: z.string().max(100),
-  altNmae: z.array(z.string()).default([]).optional(),
+  altName: z.array(z.string()).default([]).optional(),
   description: z.string().max(500),
   stock: z.number().int().nonnegative().default(0),
   price: z.number().positive(),
