@@ -3,6 +3,7 @@ import { UserRegistrationRequestSchema } from "@/types/dto/userRegisterationRequ
 import { UserUpdatedByAdminSchema } from "@/types/dto/UserUpdatedByAdmin";
 import { UserSelfUpdateRequestSchema } from "@/types/dto/UseSelfUpdateRequ";
 import { getUser, isPrivileged } from "@/utilis/authentication";
+import getPaginationInfo from "@/utilis/pageInforRetrieval";
 import bcrypt from "bcryptjs";
 import { error } from "console";
 import { NextRequest, NextResponse } from "next/server";
@@ -22,17 +23,13 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  const pageNumberInstring =
-    request.nextUrl.searchParams.get("pageNumber") || " 1";
-  const pageSizeInstring = request.nextUrl.searchParams.get("pageSize") || "10";
+  const paginationInfo = getPaginationInfo(request);
 
-  const pageNumber = parseInt(pageNumberInstring);
-  const pagesize = parseInt(pageSizeInstring);
   const userCount = await prisma.user.count();
 
-  const totalPage = Math.ceil(userCount / pageNumber);
+  const totalPage = Math.ceil(userCount / paginationInfo.pageNumber);
 
-  if (pageNumber > totalPage) {
+  if (paginationInfo.pageNumber > totalPage) {
     return NextResponse.json(
       {
         massage: "Page number exceeds total pages",
@@ -44,13 +41,13 @@ export async function GET(request: NextRequest) {
   }
 
   console.log({
-    pageNumber: pageNumber,
-    pageSize: pagesize,
+    pageNumber: paginationInfo.pageNumber,
+    pageSize: paginationInfo.pagesize,
   });
 
   const users = await prisma.user.findMany({
-    skip: (pageNumber - 1) * pagesize,
-    take: pagesize,
+    skip: (paginationInfo.pageNumber - 1) * paginationInfo.pagesize,
+    take: paginationInfo.pagesize,
     select: {
       Id: true,
       email: true,
@@ -68,8 +65,8 @@ export async function GET(request: NextRequest) {
     message: "users fetched successfully",
     users: users,
     pagination: {
-      pageNumber: pageNumber,
-      pageSize: pagesize,
+      pageNumber: paginationInfo.pageNumber,
+      pageSize: paginationInfo.pagesize,
       totalPage: totalPage,
       totalCount: userCount,
     },
